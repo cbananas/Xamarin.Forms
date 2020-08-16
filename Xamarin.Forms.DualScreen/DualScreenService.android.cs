@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
@@ -39,6 +40,7 @@ namespace Xamarin.Forms.DualScreen
 			Size _pixelScreenSize;
 			object _hingeAngleLock = new object();
 			TaskCompletionSource<int> _gettingHingeAngle;
+			bool _isSpanned;
 
 			internal static Activity MainActivity => _mainActivity;
 
@@ -62,7 +64,10 @@ namespace Xamarin.Forms.DualScreen
 				}
 
 				if (activity == _mainActivity && _HingeService._helper != null)
+				{
+					_HingeService?.UpdateSpanned();
 					return;
+				}
 
 				if (_mainActivity is IDeviceInfoProvider oldDeviceInfoProvider)
 					oldDeviceInfoProvider.ConfigurationChanged -= _HingeService.ConfigurationChanged;
@@ -74,7 +79,14 @@ namespace Xamarin.Forms.DualScreen
 
 				bool isDuo = _HingeService._isDuo = ScreenHelper.IsDualScreenDevice(_mainActivity);
 				if (!isDuo)
+				{
+					if (_mainActivity is IDeviceInfoProvider infoProvider)
+					{
+						infoProvider.ConfigurationChanged += _HingeService.ConfigurationChanged;
+					}
+
 					return;
+				}
 
 				var screenHelper = _HingeService._helper ?? new ScreenHelper();
 				isDuo = screenHelper.Initialize(_mainActivity);
@@ -93,6 +105,8 @@ namespace Xamarin.Forms.DualScreen
 				{
 					newDeviceInfoProvider.ConfigurationChanged += _HingeService.ConfigurationChanged;
 				}
+
+				_HingeService?.UpdateSpanned();
 			}
 
 			public Size ScaledScreenSize
@@ -101,8 +115,12 @@ namespace Xamarin.Forms.DualScreen
 				private set;
 			}
 
-			public bool IsSpanned
-				=> IsDuo && (_helper?.IsDualMode ?? false);
+			void UpdateSpanned()
+			{
+				_isSpanned = IsDuo && (_helper?.IsDualMode ?? false);
+			}
+
+			public bool IsSpanned => _isSpanned;
 
 			public Task<int> GetHingeAngleAsync()
 			{
@@ -131,7 +149,7 @@ namespace Xamarin.Forms.DualScreen
 								
 				var hinge = _helper.GetHingeBoundsDip();
 
-				if (hinge == null)
+				if (hinge == null || !IsSpanned)
 					return Rectangle.Zero;
 				
 				var hingeDp = new Rectangle((hinge.Left), (hinge.Top), (hinge.Width()), (hinge.Height()));
@@ -139,6 +157,7 @@ namespace Xamarin.Forms.DualScreen
 				return hingeDp;
 			}
 
+			public bool IsDualScreenDevice => IsDuo;
 			public bool IsLandscape
 			{
 				get
@@ -195,7 +214,6 @@ namespace Xamarin.Forms.DualScreen
 						{
 							// just in case something along the call path here is disposed of
 						}
-
 						return;
 					}
 
@@ -302,7 +320,10 @@ namespace Xamarin.Forms.DualScreen
 			void ConfigurationChanged(object sender, EventArgs e)
 			{
 				if (IsDuo)
+				{
 					_helper?.Update();
+					UpdateSpanned();
+				}
 
 				bool screenChanged = false;
 				if (_isLandscape != IsLandscape)
