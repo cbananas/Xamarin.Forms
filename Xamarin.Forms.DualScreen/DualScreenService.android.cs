@@ -41,6 +41,7 @@ namespace Xamarin.Forms.DualScreen
 			object _hingeAngleLock = new object();
 			TaskCompletionSource<int> _gettingHingeAngle;
 			bool _isSpanned;
+			Rectangle _hingeDp = Rectangle.Zero;
 
 			internal static Activity MainActivity => _mainActivity;
 
@@ -65,7 +66,7 @@ namespace Xamarin.Forms.DualScreen
 
 				if (activity == _mainActivity && _HingeService._helper != null)
 				{
-					_HingeService?.UpdateSpanned();
+					_HingeService?.Update();
 					return;
 				}
 
@@ -106,7 +107,7 @@ namespace Xamarin.Forms.DualScreen
 					newDeviceInfoProvider.ConfigurationChanged += _HingeService.ConfigurationChanged;
 				}
 
-				_HingeService?.UpdateSpanned();
+				_HingeService?.Update();
 			}
 
 			public Size ScaledScreenSize
@@ -115,9 +116,27 @@ namespace Xamarin.Forms.DualScreen
 				private set;
 			}
 
-			void UpdateSpanned()
+			void Update()
 			{
 				_isSpanned = IsDuo && (_helper?.IsDualMode ?? false);
+
+				if (!IsDuo)
+				{
+					_hingeDp = Rectangle.Zero;
+				}
+				else
+				{
+					var hinge = _helper.GetHingeBoundsDip();
+
+					if (hinge == null || !IsSpanned)
+					{
+						_hingeDp = Rectangle.Zero;
+					}
+					else
+					{
+						_hingeDp = new Rectangle((hinge.Left), (hinge.Top), (hinge.Width()), (hinge.Height()));
+					}
+				}
 			}
 
 			public bool IsSpanned => _isSpanned;
@@ -142,21 +161,7 @@ namespace Xamarin.Forms.DualScreen
 				return returnValue;
 			}
 
-			public Rectangle GetHinge()
-			{
-				if (!IsDuo)
-					return Rectangle.Zero;
-								
-				var hinge = _helper.GetHingeBoundsDip();
-
-				if (hinge == null || !IsSpanned)
-					return Rectangle.Zero;
-				
-				var hingeDp = new Rectangle((hinge.Left), (hinge.Top), (hinge.Width()), (hinge.Height()));
-				
-				return hingeDp;
-			}
-
+			public Rectangle GetHinge() => _hingeDp;
 			public bool IsDualScreenDevice => IsDuo;
 			public bool IsLandscape
 			{
@@ -322,7 +327,7 @@ namespace Xamarin.Forms.DualScreen
 				if (IsDuo)
 				{
 					_helper?.Update();
-					UpdateSpanned();
+					Update();
 				}
 
 				bool screenChanged = false;
