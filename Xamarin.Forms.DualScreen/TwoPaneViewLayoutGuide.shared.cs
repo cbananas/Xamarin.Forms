@@ -27,6 +27,7 @@ namespace Xamarin.Forms.DualScreen
 		List<string> _pendingPropertyChanges = new List<string>();
 		Rectangle _absoluteLayoutPosition;
 		WeakReference _watchHandle;
+		Action _layoutChangedReference;
 
 		TwoPaneViewLayoutGuide()
 		{
@@ -54,7 +55,7 @@ namespace Xamarin.Forms.DualScreen
 
 		void OnLayoutPropertyChanging(object sender, PropertyChangingEventArgs e)
 		{
-			if (e.PropertyName == "Renderer" || e.PropertyName == "Parent")
+			if (e.PropertyName == "Renderer")
 			{
 				StopWatchingForChanges();
 			}
@@ -62,7 +63,7 @@ namespace Xamarin.Forms.DualScreen
 
 		void OnLayoutPropertyChanged(object sender, PropertyChangedEventArgs e)
 		{
-			if (e.PropertyName == "Renderer" || e.PropertyName == "Parent")
+			if (e.PropertyName == "Renderer")
 			{
 				WatchForChanges();
 			}
@@ -74,15 +75,16 @@ namespace Xamarin.Forms.DualScreen
 
 			if (_layout != null)
 			{
-				if (_layout.Parent == null)
-					return;
+				_layoutChangedReference = OnLayoutChanged;
+				var layoutHandle = DualScreenService.WatchForChangesOnLayout(_layout, _layoutChangedReference);
 
-				var layoutHandle = DualScreenService.WatchForChangesOnLayout(_layout, OnLayoutChanged);
+				if (layoutHandle == null)
+				{
+					_layoutChangedReference = null;
+					return;
+				}
+
 				_watchHandle = new WeakReference(layoutHandle);
-
-				if (_watchHandle == null)
-					return;
-
 				OnScreenChanged(DualScreenService, EventArgs.Empty);
 			}
 
@@ -100,9 +102,9 @@ namespace Xamarin.Forms.DualScreen
 		public void StopWatchingForChanges()
 		{
 			DualScreenService.OnScreenChanged -= OnScreenChanged;
-
 			if (_layout != null)
 			{
+				_layoutChangedReference = null;
 				DualScreenService.StopWatchingForChangesOnLayout(_layout, _watchHandle?.Target);
 				_watchHandle = null;
 			}

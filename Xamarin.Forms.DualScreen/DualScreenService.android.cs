@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
@@ -9,6 +8,7 @@ using Microsoft.Device.Display;
 using Xamarin.Forms;
 using Xamarin.Forms.DualScreen;
 using Xamarin.Forms.Platform.Android;
+using AView = Android.Views.View;
 
 [assembly: Dependency(typeof(DualScreenService.DualScreenServiceImpl))]
 
@@ -208,37 +208,32 @@ namespace Xamarin.Forms.DualScreen
 				if (androidView == null || !androidView.IsAlive())
 					return null;
 
-				ViewTreeObserver.IOnGlobalLayoutListener listener = null;
-				listener = new GenericGlobalLayoutListener(() =>
-				{
-					if (!androidView.IsAlive())
-					{
-						action = null;
-						androidView = null;
-						try
-						{
-							_mainActivity?.Window?.DecorView?.RootView?.ViewTreeObserver?.RemoveOnGlobalLayoutListener(listener);
-						}
-						catch
-						{
-							// just in case something along the call path here is disposed of
-						}
-						return;
-					}
+				var listener = new DualScreenGlobalLayoutListener(action, androidView);
 
-					action?.Invoke();
-				});
-
+				var table = new System.Runtime.CompilerServices.ConditionalWeakTable<AView, DualScreenGlobalLayoutListener>();
 				androidView.ViewTreeObserver.AddOnGlobalLayoutListener(listener);
-				return listener;
+
+				table.Add(androidView, listener);
+				return table;
 			}
 
 			public void StopWatchingForChangesOnLayout(VisualElement visualElement, object handle)
 			{
-				if (handle == null)
+				if (!(handle is System.Runtime.CompilerServices.ConditionalWeakTable<AView, DualScreenGlobalLayoutListener> table))
 					return;
 
-				GenericGlobalLayoutListener ggl = (GenericGlobalLayoutListener)handle;
+				DualScreenGlobalLayoutListener ggl = null;
+				var view = Platform.Android.Platform.GetRenderer(visualElement);
+				var androidView = view?.View;
+
+				if (androidView == null || !(table.TryGetValue(androidView, out ggl)))
+				{
+					foreach (var pair in table)
+						ggl = pair.Value;
+				}
+
+				if (ggl == null)
+					return;
 
 				try
 				{
@@ -249,15 +244,12 @@ namespace Xamarin.Forms.DualScreen
 					// just in case something along the call path here is disposed of
 				}
 
-				var view = Platform.Android.Platform.GetRenderer(visualElement);
-				var androidView = view?.View;
-
 				if (androidView == null || !androidView.IsAlive())
 					return;
 
 				try
 				{
-					view.View.ViewTreeObserver.RemoveOnGlobalLayoutListener(ggl);
+					androidView.ViewTreeObserver.RemoveOnGlobalLayoutListener(ggl);
 				}
 				catch
 				{
@@ -265,6 +257,65 @@ namespace Xamarin.Forms.DualScreen
 				}
 			}
 
+			class DualScreenGlobalLayoutListener : Java.Lang.Object, ViewTreeObserver.IOnGlobalLayoutListener
+			{
+				WeakReference<Action> _callback;
+				WeakReference<AView> _view;
+
+				public DualScreenGlobalLayoutListener(Action callback, AView view)
+				{
+					_callback = new WeakReference<Action>(callback);
+					_view = new WeakReference<AView>(view);
+				}
+
+				public void OnGlobalLayout()
+				{
+					if (_view == null || _callback == null)
+						return;
+
+					Action invokeMe = null;
+					AView view = null;
+
+					if (!_view.TryGetTarget(out view) || !view.IsAlive())
+					{
+						Invalidate();
+
+						try
+						{
+							if(this.IsAlive())
+								_mainActivity?.Window?.DecorView?.RootView?.ViewTreeObserver?.RemoveOnGlobalLayoutListener(this);
+						}
+						catch
+						{
+							// just in case something along the call path here is disposed of
+						}
+					}
+					else if (_callback.TryGetTarget(out invokeMe))
+					{
+						invokeMe();
+					}
+					else
+					{
+						Invalidate();
+					}
+				}
+
+				protected override void Dispose(bool disposing)
+				{
+					if (disposing)
+						Invalidate();
+
+					base.Dispose(disposing);
+				}
+
+				// I don't want our code to dispose of this class I'd rather just let the natural
+				// process manage the life cycle so we don't dispose of this too early
+				internal void Invalidate()
+				{
+					_callback = null;
+					_view = null;
+				}
+			}
 
 			static EventHandler<HingeSensor.HingeSensorChangedEventArgs> _hingeAngleChanged;
 			static int subscriberCount;
