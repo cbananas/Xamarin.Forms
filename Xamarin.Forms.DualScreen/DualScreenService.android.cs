@@ -120,6 +120,7 @@ namespace Xamarin.Forms.DualScreen
 			{
 				_isSpanned = IsDuo && (_helper?.IsDualMode ?? false);
 
+				// Hinge
 				if (!IsDuo)
 				{
 					_hingeDp = Rectangle.Zero;
@@ -135,7 +136,26 @@ namespace Xamarin.Forms.DualScreen
 					else
 					{
 						_hingeDp = new Rectangle((hinge.Left), (hinge.Top), (hinge.Width()), (hinge.Height()));
+					}					
+				}
+
+				// Is Landscape
+				if (!IsDuo)
+				{
+					if (_mainActivity == null)
+						_isLandscape = false;
+					else
+					{
+
+						var orientation = _mainActivity.Resources.Configuration.Orientation;
+						_isLandscape =  (orientation == global::Android.Content.Res.Orientation.Landscape);
 					}
+				}
+				else
+				{
+
+					var rotation = ScreenHelper.GetRotation(_helper.Activity);
+					_isLandscape = (rotation == SurfaceOrientation.Rotation270 || rotation == SurfaceOrientation.Rotation90);
 				}
 			}
 
@@ -163,23 +183,7 @@ namespace Xamarin.Forms.DualScreen
 
 			public Rectangle GetHinge() => _hingeDp;
 			public bool IsDualScreenDevice => IsDuo;
-			public bool IsLandscape
-			{
-				get
-				{
-					if (!IsDuo)
-					{
-						if (_mainActivity == null)
-							return false;
-
-						var orientation = _mainActivity.Resources.Configuration.Orientation;
-						return orientation == global::Android.Content.Res.Orientation.Landscape;
-					}
-
-					var rotation = ScreenHelper.GetRotation(_helper.Activity);
-					return (rotation == SurfaceOrientation.Rotation270 || rotation == SurfaceOrientation.Rotation90);
-				}
-			}
+			public bool IsLandscape => _isLandscape;
 
 			public Point? GetLocationOnScreen(VisualElement visualElement)
 			{
@@ -234,22 +238,30 @@ namespace Xamarin.Forms.DualScreen
 				if (handle == null)
 					return;
 
+				GenericGlobalLayoutListener ggl = (GenericGlobalLayoutListener)handle;
+
+				try
+				{
+					ggl.Invalidate();
+				}
+				catch
+				{
+					// just in case something along the call path here is disposed of
+				}
+
 				var view = Platform.Android.Platform.GetRenderer(visualElement);
 				var androidView = view?.View;
 
 				if (androidView == null || !androidView.IsAlive())
 					return;
 
-				if (handle is ViewTreeObserver.IOnGlobalLayoutListener vto)
+				try
 				{
-					try
-					{
-						view.View.ViewTreeObserver.RemoveOnGlobalLayoutListener(vto);
-					}
-					catch
-					{
-						// just in case something along the call path here is disposed of
-					}
+					view.View.ViewTreeObserver.RemoveOnGlobalLayoutListener(ggl);
+				}
+				catch
+				{
+					// just in case something along the call path here is disposed of
 				}
 			}
 

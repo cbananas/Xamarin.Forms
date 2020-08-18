@@ -31,6 +31,7 @@ namespace DualScreen
 					NavButton("Companion Pane", () => new CompanionPane(), Navigation),
 					NavButton("ExtendCanvas Sample", () => new ExtendCanvas(), Navigation),
 					NavButton("DualViewMapPage Sample", () => new DualViewMapPage(), Navigation),
+					NavButton("Lots of TwoPaneViews", () => new TwoPaneViewBonanza(), Navigation),
 				}
 			};
 
@@ -50,6 +51,21 @@ namespace DualScreen
 			twoPaneView.Pane2 = pane2;
 
 			Content = twoPaneView;
+		}
+
+		protected override void OnAppearing()
+		{
+			base.OnAppearing();
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
 		}
 
 		public static Button NavButton(string galleryName, Func<Page> gallery, INavigation nav)

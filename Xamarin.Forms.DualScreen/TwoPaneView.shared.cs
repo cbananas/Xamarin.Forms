@@ -263,9 +263,13 @@ namespace Xamarin.Forms.DualScreen
 				return;
 
 			if (_hasMeasured)
+			{
 				base.LayoutChildren(x, y, width, height);
+			}
 			else
+			{
 				UpdateMode();
+			}
 		}
 
 		void UpdateMode(bool invalidateLayout = true)

@@ -16,6 +16,20 @@ namespace DualScreen
 		public TwoPaneViewBonanza()
 		{
 			InitializeComponent();
+			cvData.Scrolled += OnCVDataScrolled;
+		}
+
+		private void OnCVDataScrolled(object sender, ItemsViewScrolledEventArgs e)
+		{
+			foreach(var element in cvData.LogicalChildren.OfType<StackLayout>())
+				element.Children[1].InvalidateMeasureNonVirtual(Xamarin.Forms.Internals.InvalidationTrigger.MeasureChanged);
+		}
+
+		protected override void OnAppearing()
+		{
+			base.OnAppearing();
+			cvData.ItemsSource =
+				Enumerable.Range(0, 1000).ToList();
 		}
 	}
 }
