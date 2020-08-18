@@ -194,13 +194,14 @@ namespace Xamarin.Forms.DualScreen
 			public Point? GetLocationOnScreen(VisualElement visualElement)
 			{
 				var view = Platform.Android.Platform.GetRenderer(visualElement);
+				var androidView = view?.View;
 
-				if (view?.View == null)
+				if (!androidView.IsAlive())
 					return null;
 
 				int[] location = new int[2];
-				view.View.GetLocationOnScreen(location);
-				return new Point(view.View.Context.FromPixels(location[0]), view.View.Context.FromPixels(location[1]));
+				androidView.GetLocationOnScreen(location);
+				return new Point(androidView.Context.FromPixels(location[0]), androidView.Context.FromPixels(location[1]));
 			}
 
 			public object WatchForChangesOnLayout(VisualElement visualElement, Action action)
@@ -218,7 +219,6 @@ namespace Xamarin.Forms.DualScreen
 
 				var table = new System.Runtime.CompilerServices.ConditionalWeakTable<AView, DualScreenGlobalLayoutListener>();
 				androidView.ViewTreeObserver.AddOnGlobalLayoutListener(listener);
-
 				table.Add(androidView, listener);
 				return table;
 			}
@@ -284,7 +284,7 @@ namespace Xamarin.Forms.DualScreen
 
 					if (!_view.TryGetTarget(out view) || !view.IsAlive())
 					{
-						Invalidate();
+						Invalidate(view);
 					}
 					else if (_callback.TryGetTarget(out invokeMe))
 					{
@@ -292,24 +292,45 @@ namespace Xamarin.Forms.DualScreen
 					}
 					else
 					{
-						Invalidate();
+						Invalidate(view);
 					}
 				}
 
 				protected override void Dispose(bool disposing)
 				{
 					if (disposing)
-						Invalidate();
+						Invalidate(null);
 
 					base.Dispose(disposing);
 				}
 
-				// I don't want our code to dispose of this class I'd rather just let the natural
-				// process manage the life cycle so we don't dispose of this too early
 				internal void Invalidate()
 				{
+					AView view = null;
+					_view.TryGetTarget(out view);
+					Invalidate(view);
+				}
+
+				// I don't want our code to dispose of this class I'd rather just let the natural
+				// process manage the life cycle so we don't dispose of this too early
+				void Invalidate(AView androidView)
+				{
+					if (androidView.IsAlive())
+					{
+						try
+						{
+							androidView.ViewTreeObserver.RemoveOnGlobalLayoutListener(this);
+						}
+						catch
+						{
+							// just in case something along the call path here is disposed of
+						}
+					}
+
 					try
 					{
+						// If the androidView itself becomes disposed of the listener will survive the life of the view
+						// and it will get moved to the root views tree observer
 						if (this.IsAlive())
 							_mainActivity?.Window?.DecorView?.RootView?.ViewTreeObserver?.RemoveOnGlobalLayoutListener(this);
 					}

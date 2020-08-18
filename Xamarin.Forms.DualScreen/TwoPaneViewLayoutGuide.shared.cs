@@ -84,10 +84,12 @@ namespace Xamarin.Forms.DualScreen
 
 				_watchHandle = layoutHandle;
 				OnScreenChanged(DualScreenService, EventArgs.Empty);
+				DualScreenService.OnScreenChanged += OnScreenChanged;
 			}
-
-			DualScreenService.OnScreenChanged -= OnScreenChanged;
-			DualScreenService.OnScreenChanged += OnScreenChanged;
+			else
+			{
+				DualScreenService.OnScreenChanged += OnScreenChanged;
+			}
 		}
 
 		public void StopWatchingForChanges()

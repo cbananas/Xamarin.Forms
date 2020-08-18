@@ -31,5 +31,11 @@ namespace DualScreen
 			cvData.ItemsSource =
 				Enumerable.Range(0, 1000).ToList();
 		}
+
+		private void OnResetCollectionView(object sender, EventArgs e)
+		{
+			cvData.ItemsSource =
+				Enumerable.Range(0, 1000).ToList();
+		}
 	}
 }

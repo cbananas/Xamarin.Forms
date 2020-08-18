@@ -17,7 +17,7 @@
                             </dualScreen:TwoPaneView.Pane1>
                             <dualScreen:TwoPaneView.Pane2>
                                 <StackLayout>
-                                    <Label Text="Hello There"></Label>
+                                    <Button Text="Reset CollectionView" Clicked="OnResetCollectionView"></Button>
                                 </StackLayout>
                             </dualScreen:TwoPaneView.Pane2>
                         </dualScreen:TwoPaneView>

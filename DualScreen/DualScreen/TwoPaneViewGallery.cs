@@ -44,7 +44,7 @@ namespace DualScreen
 					NavButton("DualScreenInfo with non TwoPaneView", () => new GridUsingDualScreenInfo(), Navigation),
 					NavButton("eReader Samples", () => new TwoPage(), Navigation),
 					NavButton("Dual Screen Info Samples", () => new DualScreenInfoGallery(), Navigation),
-					new Button(){ Text = "Collect Garbage", Command = new Command(OnCollectGarbage) }
+					StyleButton(new Button(){ Text = "Collect Garbage", Command = new Command(OnCollectGarbage) })
 				}
 			};
 
@@ -62,10 +62,18 @@ namespace DualScreen
 			GC.WaitForPendingFinalizers();
 		}
 
+		public static Button StyleButton(Button button)
+		{
+			button.FontSize = 10;
+			button.HeightRequest = Device.RuntimePlatform == Device.Android ? 40 : 30;
+
+			return button;
+		}
+
 		public static Button NavButton(string galleryName, Func<Page> gallery, INavigation nav)
 		{
 			var automationId = System.Text.RegularExpressions.Regex.Replace(galleryName, " |\\(|\\)", string.Empty);
-			var button = new Button { Text = $"{galleryName}", AutomationId = automationId, FontSize = 10, HeightRequest = Device.RuntimePlatform == Device.Android ? 40 : 30 };
+			var button = StyleButton(new Button { Text = $"{galleryName}", AutomationId = automationId });
 			button.Clicked += (sender, args) => { nav.PushAsync(gallery()); };
 			return button;
 		}
