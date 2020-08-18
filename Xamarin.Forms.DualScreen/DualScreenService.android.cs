@@ -46,7 +46,7 @@ namespace Xamarin.Forms.DualScreen
 			internal static Activity MainActivity => _mainActivity;
 
 			static HingeSensor DefaultHingeSensor;
-			public event EventHandler OnScreenChanged;
+			readonly WeakEventManager _onScreenChangedEventManager = new WeakEventManager();
 
 			[Internals.Preserve(Conditional = true)]
 			public DualScreenServiceImpl()
@@ -116,6 +116,12 @@ namespace Xamarin.Forms.DualScreen
 				private set;
 			}
 
+			public event EventHandler OnScreenChanged
+			{
+				add { _onScreenChangedEventManager.AddEventHandler(value); }
+				remove { _onScreenChangedEventManager.RemoveEventHandler(value); }
+			}
+
 			void Update()
 			{
 				_isSpanned = IsDuo && (_helper?.IsDualMode ?? false);
@@ -136,7 +142,7 @@ namespace Xamarin.Forms.DualScreen
 					else
 					{
 						_hingeDp = new Rectangle((hinge.Left), (hinge.Top), (hinge.Width()), (hinge.Height()));
-					}					
+					}
 				}
 
 				// Is Landscape
@@ -148,7 +154,7 @@ namespace Xamarin.Forms.DualScreen
 					{
 
 						var orientation = _mainActivity.Resources.Configuration.Orientation;
-						_isLandscape =  (orientation == global::Android.Content.Res.Orientation.Landscape);
+						_isLandscape = (orientation == global::Android.Content.Res.Orientation.Landscape);
 					}
 				}
 				else
@@ -279,16 +285,6 @@ namespace Xamarin.Forms.DualScreen
 					if (!_view.TryGetTarget(out view) || !view.IsAlive())
 					{
 						Invalidate();
-
-						try
-						{
-							if(this.IsAlive())
-								_mainActivity?.Window?.DecorView?.RootView?.ViewTreeObserver?.RemoveOnGlobalLayoutListener(this);
-						}
-						catch
-						{
-							// just in case something along the call path here is disposed of
-						}
 					}
 					else if (_callback.TryGetTarget(out invokeMe))
 					{
@@ -312,6 +308,16 @@ namespace Xamarin.Forms.DualScreen
 				// process manage the life cycle so we don't dispose of this too early
 				internal void Invalidate()
 				{
+					try
+					{
+						if (this.IsAlive())
+							_mainActivity?.Window?.DecorView?.RootView?.ViewTreeObserver?.RemoveOnGlobalLayoutListener(this);
+					}
+					catch
+					{
+						// just in case something along the call path here is disposed of
+					}
+
 					_callback = null;
 					_view = null;
 				}
@@ -347,7 +353,7 @@ namespace Xamarin.Forms.DualScreen
 				if (sensor == null)
 					return;
 
-				lock(hingeAngleLock)
+				lock (hingeAngleLock)
 				{
 					if (subscriberCount == 1)
 					{
@@ -374,8 +380,6 @@ namespace Xamarin.Forms.DualScreen
 
 					_singleUseHingeSensor = null;
 					DefaultHingeSensor = null;
-
-					
 				}
 				else
 				{
@@ -417,7 +421,7 @@ namespace Xamarin.Forms.DualScreen
 				}
 
 				if (screenChanged)
-					OnScreenChanged?.Invoke(this, e);
+					_onScreenChangedEventManager.HandleEvent(this, e, nameof(OnScreenChanged));
 			}
 
 

@@ -18,7 +18,7 @@ namespace DualScreen
 
 			var twoPaneView = new TwoPaneView()
 			{
-				MinTallModeHeight  = 0,
+				MinTallModeHeight = 0,
 				MinWideModeWidth = 0
 			};
 
@@ -44,6 +44,7 @@ namespace DualScreen
 					NavButton("DualScreenInfo with non TwoPaneView", () => new GridUsingDualScreenInfo(), Navigation),
 					NavButton("eReader Samples", () => new TwoPage(), Navigation),
 					NavButton("Dual Screen Info Samples", () => new DualScreenInfoGallery(), Navigation),
+					new Button(){ Text = "Collect Garbage", Command = new Command(OnCollectGarbage) }
 				}
 			};
 
@@ -53,15 +54,8 @@ namespace DualScreen
 			Content = twoPaneView;
 		}
 
-		protected override void OnAppearing()
+		void OnCollectGarbage(object obj)
 		{
-			base.OnAppearing();
-			GC.Collect();
-			GC.WaitForPendingFinalizers();
-			GC.Collect();
-			GC.WaitForPendingFinalizers();
-			GC.Collect();
-			GC.WaitForPendingFinalizers();
 			GC.Collect();
 			GC.WaitForPendingFinalizers();
 			GC.Collect();

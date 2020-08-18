@@ -26,7 +26,7 @@ namespace Xamarin.Forms.DualScreen
 		public event PropertyChangedEventHandler PropertyChanged;
 		List<string> _pendingPropertyChanges = new List<string>();
 		Rectangle _absoluteLayoutPosition;
-		WeakReference _watchHandle;
+		object _watchHandle;
 		Action _layoutChangedReference;
 
 		TwoPaneViewLayoutGuide()
@@ -71,9 +71,7 @@ namespace Xamarin.Forms.DualScreen
 
 		public void WatchForChanges()
 		{
-			StopWatchingForChanges();
-
-			if (_layout != null)
+			if (_layout != null && _watchHandle == null)
 			{
 				_layoutChangedReference = OnLayoutChanged;
 				var layoutHandle = DualScreenService.WatchForChangesOnLayout(_layout, _layoutChangedReference);
@@ -84,19 +82,12 @@ namespace Xamarin.Forms.DualScreen
 					return;
 				}
 
-				_watchHandle = new WeakReference(layoutHandle);
+				_watchHandle = layoutHandle;
 				OnScreenChanged(DualScreenService, EventArgs.Empty);
 			}
 
+			DualScreenService.OnScreenChanged -= OnScreenChanged;
 			DualScreenService.OnScreenChanged += OnScreenChanged;
-		}
-
-		void OnLayoutChanged()
-		{
-			if (_watchHandle == null || !_watchHandle.IsAlive)
-				StopWatchingForChanges();
-
-			OnScreenChanged(DualScreenService, EventArgs.Empty);
 		}
 
 		public void StopWatchingForChanges()
@@ -104,10 +95,22 @@ namespace Xamarin.Forms.DualScreen
 			DualScreenService.OnScreenChanged -= OnScreenChanged;
 			if (_layout != null)
 			{
-				_layoutChangedReference = null;
-				DualScreenService.StopWatchingForChangesOnLayout(_layout, _watchHandle?.Target);
-				_watchHandle = null;
+				DualScreenService.StopWatchingForChangesOnLayout(_layout, _watchHandle);
 			}
+
+			_layoutChangedReference = null;
+			_watchHandle = null;
+		}
+
+		void OnLayoutChanged()
+		{
+			if (_watchHandle == null)
+			{
+				StopWatchingForChanges();
+				return;
+			}
+
+			OnScreenChanged(DualScreenService, EventArgs.Empty);
 		}
 
 		void OnScreenChanged(object sender, EventArgs e)
@@ -115,6 +118,12 @@ namespace Xamarin.Forms.DualScreen
 			if (_layout == null)
 			{
 				UpdateLayouts();
+				return;
+			}
+
+			if(_layout != null && _watchHandle == null)
+			{
+				StopWatchingForChanges();
 				return;
 			}
 
