@@ -61,7 +61,7 @@ namespace Xamarin.Forms.DualScreen
 
 		void OnCurrentSizeChanged(object sender, Windows.UI.Core.WindowSizeChangedEventArgs e)
 		{
-			_onScreenChangedEventManager.HandleEvent(this, e, nameof(OnScreenChanged));
+			_onScreenChangedEventManager.HandleEvent(this, EventArgs.Empty, nameof(OnScreenChanged));
 		}
 
 		public bool IsSpanned

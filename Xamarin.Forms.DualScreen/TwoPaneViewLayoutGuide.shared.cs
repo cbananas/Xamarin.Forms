@@ -131,7 +131,10 @@ namespace Xamarin.Forms.DualScreen
 
 			var screenPosition = DualScreenService.GetLocationOnScreen(_layout);
 			if (screenPosition == null)
+			{
+				UpdateLayouts();
 				return;
+			}
 
 			var newPosition = new Rectangle(screenPosition.Value, _layout.Bounds.Size);
 

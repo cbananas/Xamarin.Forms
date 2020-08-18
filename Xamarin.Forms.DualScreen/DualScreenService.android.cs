@@ -415,13 +415,14 @@ namespace Xamarin.Forms.DualScreen
 				if (IsDuo)
 				{
 					_helper?.Update();
-					Update();
 				}
 
+				bool wasLandscape = IsLandscape;
+				Update();
+
 				bool screenChanged = false;
-				if (_isLandscape != IsLandscape)
+				if (wasLandscape != IsLandscape)
 				{
-					_isLandscape = IsLandscape;
 					screenChanged = true;
 				}
 
